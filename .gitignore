@@ -1,0 +1,21 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Compilacion
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# Herramientas locales
+.agents/
+.codex/
+
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store

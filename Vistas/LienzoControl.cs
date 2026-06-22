@@ -1,0 +1,86 @@
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Windows.Forms;
+using Paint_Bolaños_Flores_Venegas.Nucleo;
+
+namespace Paint_Bolaños_Flores_Venegas.Vistas
+{
+    public sealed class LienzoControl : Control
+    {
+        private Bitmap imagen;
+        private DocumentoDibujo documento;
+        private GestorHerramientas gestor;
+        private float zoom = 1f;
+        public event Action<PointF> CoordenadaCambio;
+
+        public LienzoControl()
+        {
+            DoubleBuffered = true; SetStyle(ControlStyles.ResizeRedraw | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            BackColor = Color.FromArgb(255,255,253,245); Cursor = Cursors.Cross;
+        }
+
+        public void Configurar(DocumentoDibujo doc, GestorHerramientas nuevoGestor)
+        {
+            if (documento != null) documento.Cambio -= DocumentoCambio;
+            if (gestor != null) gestor.CambioVisual -= GestorCambio;
+            documento = doc; gestor = nuevoGestor;
+            documento.Cambio += DocumentoCambio; gestor.CambioVisual += GestorCambio; gestor.ToleranciaInteraccion = 9f / zoom;
+            ActualizarTamano(); ActualizarImagen();
+        }
+
+        public void EstablecerZoom(float valor)
+        {
+            zoom = Math.Max(.25f, Math.Min(4f, valor)); if(gestor!=null)gestor.ToleranciaInteraccion=9f/zoom; ActualizarTamano(); Invalidate();
+        }
+
+        public void ActualizarImagen()
+        {
+            if (documento == null || gestor == null) return; imagen?.Dispose(); imagen = gestor.Rasterizador.Renderizar(documento, gestor.VistaPrevia); Invalidate();
+        }
+
+        private void DocumentoCambio(object sender, EventArgs e) => ActualizarImagen();
+        private void GestorCambio(object sender, EventArgs e) => ActualizarImagen();
+        private void ActualizarTamano() { if (documento != null) Size = new Size(Math.Max(1,(int)(documento.Ancho*zoom)), Math.Max(1,(int)(documento.Alto*zoom))); }
+        private PointF ADocumento(Point p) => new PointF(p.X / zoom, p.Y / zoom);
+        private PointF APantalla(PointF p) => new PointF(p.X * zoom, p.Y * zoom);
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e); if (imagen == null) return;
+            e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor; e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
+            e.Graphics.DrawImage(imagen, ClientRectangle, new Rectangle(0,0,imagen.Width,imagen.Height), GraphicsUnit.Pixel);
+            DibujarSeleccion(e.Graphics); DibujarLazo(e.Graphics);
+        }
+
+        private void DibujarSeleccion(Graphics g)
+        {
+            if (gestor == null || gestor.Seleccion.Count == 0) return; var marco=gestor.MarcoSeleccion();if(marco.Count<4)return;var pantalla=marco.Select(APantalla).ToArray();
+            using (var pen = new Pen(Color.FromArgb(131,94,72), 1) { DashStyle = DashStyle.Dash }) g.DrawPolygon(pen,pantalla);
+            DibujarTirador(g, APantalla(gestor.PuntoTiradorEscala()), Color.FromArgb(228,169,168));
+            PointF rot = APantalla(gestor.PuntoTiradorRotacion()); PointF anclaje=new PointF((pantalla[0].X+pantalla[1].X)/2f,(pantalla[0].Y+pantalla[1].Y)/2f); using(var pen=new Pen(Color.FromArgb(131,94,72))) g.DrawLine(pen,anclaje,rot);
+            DibujarTirador(g, rot, Color.FromArgb(241,216,132));
+        }
+        private static void DibujarTirador(Graphics g, PointF p, Color c) { using(var b=new SolidBrush(c)) using(var pen=new Pen(Color.FromArgb(131,94,72))) { var r=new RectangleF(p.X-4,p.Y-4,8,8); g.FillRectangle(b,r); g.DrawRectangle(pen,r.X,r.Y,r.Width,r.Height); } }
+        private void DibujarLazo(Graphics g)
+        {
+            if (gestor == null || gestor.Lazo.Count < 2) return; using(var pen=new Pen(Color.FromArgb(131,94,72),1){DashStyle=DashStyle.Dot})
+            { for(int i=1;i<gestor.Lazo.Count;i++) g.DrawLine(pen,APantalla(gestor.Lazo[i-1]),APantalla(gestor.Lazo[i])); }
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e) { base.OnMouseDown(e); if(e.Button==MouseButtons.Left) { Focus(); gestor?.Iniciar(ADocumento(e.Location)); } }
+        protected override void OnMouseMove(MouseEventArgs e) { base.OnMouseMove(e); var p=ADocumento(e.Location); CoordenadaCambio?.Invoke(p); if(e.Button==MouseButtons.Left) gestor?.Mover(p); else ActualizarCursor(p); }
+        protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); if(e.Button==MouseButtons.Left) gestor?.Terminar(ADocumento(e.Location)); }
+        protected override void OnMouseDoubleClick(MouseEventArgs e) { base.OnMouseDoubleClick(e); if(e.Button==MouseButtons.Left) gestor?.DobleClic(ADocumento(e.Location)); }
+        private void ActualizarCursor(PointF p)
+        {
+            if(gestor==null||(gestor.HerramientaActual!=HerramientaTipo.Seleccion&&gestor.HerramientaActual!=HerramientaTipo.SeleccionLibre)||gestor.Seleccion.Count==0){Cursor=Cursors.Cross;return;}
+            RectangleF r=gestor.LimitesSeleccion();PointF escala=gestor.PuntoTiradorEscala();PointF rotacion=gestor.PuntoTiradorRotacion();
+            if(LineaFigura.Distancia(p,rotacion)<=gestor.ToleranciaInteraccion)Cursor=Cursors.Hand;
+            else if(LineaFigura.Distancia(p,escala)<=gestor.ToleranciaInteraccion)Cursor=Cursors.SizeNWSE;
+            else if(r.Contains(p))Cursor=Cursors.SizeAll;else Cursor=Cursors.Default;
+        }
+        protected override void Dispose(bool disposing) { if(disposing) imagen?.Dispose(); base.Dispose(disposing); }
+    }
+}
