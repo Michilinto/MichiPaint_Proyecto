@@ -4,12 +4,102 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
 {
     public sealed class RecorteCohenSutherland : IAlgoritmoRecorteLinea
     {
-        public string Nombre=>"Cohen-Sutherland";
-        public bool Recortar(Rectangle ventana,ref PointF p0,ref PointF p1)
+        private const int Izquierda = 1;
+        private const int Derecha = 2;
+        private const int Arriba = 4;
+        private const int Abajo = 8;
+
+        public string Nombre => "Cohen-Sutherland";
+
+        public bool Recortar(Rectangle ventana, ref PointF punto0, ref PointF punto1)
         {
-            int c0=Codigo(ventana,p0),c1=Codigo(ventana,p1);
-            while(true){if((c0|c1)==0)return true;if((c0&c1)!=0)return false;int c=c0!=0?c0:c1;float x=0,y=0;if((c&8)!=0){x=p0.X+(p1.X-p0.X)*(ventana.Bottom-p0.Y)/(p1.Y-p0.Y);y=ventana.Bottom;}else if((c&4)!=0){x=p0.X+(p1.X-p0.X)*(ventana.Top-p0.Y)/(p1.Y-p0.Y);y=ventana.Top;}else if((c&2)!=0){y=p0.Y+(p1.Y-p0.Y)*(ventana.Right-p0.X)/(p1.X-p0.X);x=ventana.Right;}else{y=p0.Y+(p1.Y-p0.Y)*(ventana.Left-p0.X)/(p1.X-p0.X);x=ventana.Left;}if(c==c0){p0=new PointF(x,y);c0=Codigo(ventana,p0);}else{p1=new PointF(x,y);c1=Codigo(ventana,p1);}}
+            int codigo0 = Codigo(ventana, punto0);
+            int codigo1 = Codigo(ventana, punto1);
+
+            while (true)
+            {
+                if ((codigo0 | codigo1) == 0)
+                {
+                    return true;
+                }
+
+                if ((codigo0 & codigo1) != 0)
+                {
+                    return false;
+                }
+
+                int codigoFuera = codigo0 != 0 ? codigo0 : codigo1;
+                PointF interseccion = CalcularInterseccion(ventana, punto0, punto1, codigoFuera);
+
+                if (codigoFuera == codigo0)
+                {
+                    punto0 = interseccion;
+                    codigo0 = Codigo(ventana, punto0);
+                }
+                else
+                {
+                    punto1 = interseccion;
+                    codigo1 = Codigo(ventana, punto1);
+                }
+            }
         }
-        private static int Codigo(Rectangle r,PointF p){int c=0;if(p.X<r.Left)c|=1;else if(p.X>r.Right)c|=2;if(p.Y<r.Top)c|=4;else if(p.Y>r.Bottom)c|=8;return c;}
+
+        private static PointF CalcularInterseccion(
+            Rectangle ventana,
+            PointF punto0,
+            PointF punto1,
+            int codigo)
+        {
+            float x;
+            float y;
+
+            if ((codigo & Abajo) != 0)
+            {
+                x = punto0.X + (punto1.X - punto0.X) * (ventana.Bottom - punto0.Y) / (punto1.Y - punto0.Y);
+                y = ventana.Bottom;
+            }
+            else if ((codigo & Arriba) != 0)
+            {
+                x = punto0.X + (punto1.X - punto0.X) * (ventana.Top - punto0.Y) / (punto1.Y - punto0.Y);
+                y = ventana.Top;
+            }
+            else if ((codigo & Derecha) != 0)
+            {
+                y = punto0.Y + (punto1.Y - punto0.Y) * (ventana.Right - punto0.X) / (punto1.X - punto0.X);
+                x = ventana.Right;
+            }
+            else
+            {
+                y = punto0.Y + (punto1.Y - punto0.Y) * (ventana.Left - punto0.X) / (punto1.X - punto0.X);
+                x = ventana.Left;
+            }
+
+            return new PointF(x, y);
+        }
+
+        private static int Codigo(Rectangle ventana, PointF punto)
+        {
+            int codigo = 0;
+
+            if (punto.X < ventana.Left)
+            {
+                codigo |= Izquierda;
+            }
+            else if (punto.X > ventana.Right)
+            {
+                codigo |= Derecha;
+            }
+
+            if (punto.Y < ventana.Top)
+            {
+                codigo |= Arriba;
+            }
+            else if (punto.Y > ventana.Bottom)
+            {
+                codigo |= Abajo;
+            }
+
+            return codigo;
+        }
     }
 }

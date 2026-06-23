@@ -548,6 +548,10 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             this.panelOpciones.Controls.Add(this.usarRelleno);
             this.panelOpciones.Controls.Add(this.lblFigura);
             this.panelOpciones.Controls.Add(this.selectorFigura);
+            this.panelOpciones.Controls.Add(this.lblAlgoritmoLinea);
+            this.panelOpciones.Controls.Add(this.algoritmoLinea);
+            this.panelOpciones.Controls.Add(this.lblAlgoritmoCirculo);
+            this.panelOpciones.Controls.Add(this.algoritmoCirculo);
             this.panelOpciones.Controls.Add(this.btnFuente);
             this.panelOpciones.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelOpciones.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
@@ -655,7 +659,7 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             this.usarRelleno.Name = "usarRelleno";
             this.usarRelleno.Size = new System.Drawing.Size(94, 22);
             this.usarRelleno.TabIndex = 2;
-            this.usarRelleno.Text = "Con relleno";
+            this.usarRelleno.Text = "Relleno";
             //
             // lblFigura
             //
@@ -692,9 +696,10 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             this.lblAlgoritmoLinea.ForeColor = System.Drawing.Color.FromArgb(131, 94, 72);
             this.lblAlgoritmoLinea.Location = new System.Drawing.Point(5, 78);
             this.lblAlgoritmoLinea.Name = "lblAlgoritmoLinea";
-            this.lblAlgoritmoLinea.Size = new System.Drawing.Size(95, 18);
+            this.lblAlgoritmoLinea.Size = new System.Drawing.Size(94, 18);
             this.lblAlgoritmoLinea.TabIndex = 3;
-            this.lblAlgoritmoLinea.Text = "Alg. linea";
+            this.lblAlgoritmoLinea.Text = "Alg. línea";
+            this.lblAlgoritmoLinea.Visible = false;
             //
             // algoritmoLinea
             //
@@ -709,6 +714,7 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             this.algoritmoLinea.Name = "algoritmoLinea";
             this.algoritmoLinea.Size = new System.Drawing.Size(94, 22);
             this.algoritmoLinea.TabIndex = 4;
+            this.algoritmoLinea.Visible = false;
             //
             // lblAlgoritmoCirculo
             //
@@ -716,9 +722,10 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             this.lblAlgoritmoCirculo.ForeColor = System.Drawing.Color.FromArgb(131, 94, 72);
             this.lblAlgoritmoCirculo.Location = new System.Drawing.Point(5, 128);
             this.lblAlgoritmoCirculo.Name = "lblAlgoritmoCirculo";
-            this.lblAlgoritmoCirculo.Size = new System.Drawing.Size(95, 18);
+            this.lblAlgoritmoCirculo.Size = new System.Drawing.Size(94, 18);
             this.lblAlgoritmoCirculo.TabIndex = 5;
-            this.lblAlgoritmoCirculo.Text = "Alg. circulo";
+            this.lblAlgoritmoCirculo.Text = "Alg. elipse";
+            this.lblAlgoritmoCirculo.Visible = false;
             //
             // algoritmoCirculo
             //
@@ -728,11 +735,12 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             this.algoritmoCirculo.Items.AddRange(new object[] {
             "Punto medio",
             "Polar",
-            "Ecuacion"});
+            "Ecuación"});
             this.algoritmoCirculo.Location = new System.Drawing.Point(5, 149);
             this.algoritmoCirculo.Name = "algoritmoCirculo";
             this.algoritmoCirculo.Size = new System.Drawing.Size(94, 22);
             this.algoritmoCirculo.TabIndex = 6;
+            this.algoritmoCirculo.Visible = false;
             //
             // btnFuente
             //

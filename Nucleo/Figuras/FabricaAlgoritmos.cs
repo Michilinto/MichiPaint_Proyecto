@@ -4,11 +4,32 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
     {
         public IAlgoritmoLinea CrearLinea(AlgoritmoLineaTipo tipo)
         {
-            if(tipo==AlgoritmoLineaTipo.DDA)return new LineaDDA();if(tipo==AlgoritmoLineaTipo.PuntoMedio)return new LineaPuntoMedio();return new LineaBresenham();
+            switch (tipo)
+            {
+                case AlgoritmoLineaTipo.DDA:
+                    return new LineaDDA();
+
+                case AlgoritmoLineaTipo.PuntoMedio:
+                    return new LineaPuntoMedio();
+
+                default:
+                    return new LineaBresenham();
+            }
         }
+
         public IAlgoritmoCirculo CrearCirculo(AlgoritmoCirculoTipo tipo)
         {
-            if(tipo==AlgoritmoCirculoTipo.Polar)return new CirculoPolar();if(tipo==AlgoritmoCirculoTipo.EcuacionDirecta)return new CirculoEcuacionDirecta();return new CirculoPuntoMedio();
+            switch (tipo)
+            {
+                case AlgoritmoCirculoTipo.Polar:
+                    return new CirculoPolar();
+
+                case AlgoritmoCirculoTipo.EcuacionDirecta:
+                    return new CirculoEcuacionDirecta();
+
+                default:
+                    return new CirculoPuntoMedio();
+            }
         }
     }
 }

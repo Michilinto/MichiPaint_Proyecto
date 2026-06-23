@@ -7,13 +7,123 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
 {
     public sealed class RecorteSutherlandHodgman : IAlgoritmoRecortePoligono
     {
-        public string Nombre=>"Sutherland-Hodgman";
-        public List<Point> Recortar(IEnumerable<Point> poligono,Rectangle ventana)
+        public string Nombre => "Sutherland-Hodgman";
+
+        public List<Point> Recortar(IEnumerable<Point> poligono, Rectangle ventana)
         {
-            var salida=poligono.Select(p=>new PointF(p.X,p.Y)).ToList();
-            for(int borde=0;borde<4;borde++){var entrada=salida;salida=new List<PointF>();if(entrada.Count==0)break;PointF s=entrada[entrada.Count-1];foreach(var e in entrada){bool sd=Dentro(s,ventana,borde),ed=Dentro(e,ventana,borde);if(ed){if(!sd)salida.Add(Interseccion(s,e,ventana,borde));salida.Add(e);}else if(sd)salida.Add(Interseccion(s,e,ventana,borde));s=e;}}return salida.Select(Point.Round).ToList();
+            var salida = poligono
+                .Select(punto => new PointF(punto.X, punto.Y))
+                .ToList();
+
+            for (int borde = 0; borde < 4; borde++)
+            {
+                salida = RecortarContraBorde(salida, ventana, borde);
+
+                if (salida.Count == 0)
+                {
+                    break;
+                }
+            }
+
+            return salida.Select(Point.Round).ToList();
         }
-        private static bool Dentro(PointF p,Rectangle r,int b){if(b==0)return p.X>=r.Left;if(b==1)return p.X<=r.Right;if(b==2)return p.Y>=r.Top;return p.Y<=r.Bottom;}
-        private static PointF Interseccion(PointF s,PointF e,Rectangle r,int b){float dx=e.X-s.X,dy=e.Y-s.Y,x=s.X,y=s.Y;if(b==0){x=r.Left;y=Math.Abs(dx)<.0001f?s.Y:s.Y+dy*(r.Left-s.X)/dx;}else if(b==1){x=r.Right;y=Math.Abs(dx)<.0001f?s.Y:s.Y+dy*(r.Right-s.X)/dx;}else if(b==2){y=r.Top;x=Math.Abs(dy)<.0001f?s.X:s.X+dx*(r.Top-s.Y)/dy;}else{y=r.Bottom;x=Math.Abs(dy)<.0001f?s.X:s.X+dx*(r.Bottom-s.Y)/dy;}return new PointF(x,y);}
+
+        private static List<PointF> RecortarContraBorde(
+            IReadOnlyList<PointF> entrada,
+            Rectangle ventana,
+            int borde)
+        {
+            var salida = new List<PointF>();
+
+            if (entrada.Count == 0)
+            {
+                return salida;
+            }
+
+            PointF anterior = entrada[entrada.Count - 1];
+
+            foreach (var actual in entrada)
+            {
+                bool anteriorDentro = Dentro(anterior, ventana, borde);
+                bool actualDentro = Dentro(actual, ventana, borde);
+
+                if (actualDentro)
+                {
+                    if (!anteriorDentro)
+                    {
+                        salida.Add(Interseccion(anterior, actual, ventana, borde));
+                    }
+
+                    salida.Add(actual);
+                }
+                else if (anteriorDentro)
+                {
+                    salida.Add(Interseccion(anterior, actual, ventana, borde));
+                }
+
+                anterior = actual;
+            }
+
+            return salida;
+        }
+
+        private static bool Dentro(PointF punto, Rectangle ventana, int borde)
+        {
+            if (borde == 0)
+            {
+                return punto.X >= ventana.Left;
+            }
+
+            if (borde == 1)
+            {
+                return punto.X <= ventana.Right;
+            }
+
+            if (borde == 2)
+            {
+                return punto.Y >= ventana.Top;
+            }
+
+            return punto.Y <= ventana.Bottom;
+        }
+
+        private static PointF Interseccion(PointF inicio, PointF fin, Rectangle ventana, int borde)
+        {
+            float dx = fin.X - inicio.X;
+            float dy = fin.Y - inicio.Y;
+            float x = inicio.X;
+            float y = inicio.Y;
+
+            if (borde == 0)
+            {
+                x = ventana.Left;
+                y = Math.Abs(dx) < .0001f
+                    ? inicio.Y
+                    : inicio.Y + dy * (ventana.Left - inicio.X) / dx;
+            }
+            else if (borde == 1)
+            {
+                x = ventana.Right;
+                y = Math.Abs(dx) < .0001f
+                    ? inicio.Y
+                    : inicio.Y + dy * (ventana.Right - inicio.X) / dx;
+            }
+            else if (borde == 2)
+            {
+                y = ventana.Top;
+                x = Math.Abs(dy) < .0001f
+                    ? inicio.X
+                    : inicio.X + dx * (ventana.Top - inicio.Y) / dy;
+            }
+            else
+            {
+                y = ventana.Bottom;
+                x = Math.Abs(dy) < .0001f
+                    ? inicio.X
+                    : inicio.X + dx * (ventana.Bottom - inicio.Y) / dy;
+            }
+
+            return new PointF(x, y);
+        }
     }
 }

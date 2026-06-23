@@ -5,14 +5,59 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
 {
     public class RectanguloFigura : PoligonoFigura
     {
-        public override string Tipo=>Redondeado?"rectangulo_redondeado":"rectangulo";
-        public bool Redondeado{get;set;}
-        public RectanguloFigura(){}
-        public RectanguloFigura(RectangleF r,EstiloFigura e,bool redondeado):base(Crear(r,redondeado),e){Redondeado=redondeado;}
-        protected static IEnumerable<PointF> Crear(RectangleF r,bool redondeado)
+        public override string Tipo => Redondeado ? "rectangulo_redondeado" : "rectangulo";
+        public bool Redondeado { get; set; }
+
+        public RectanguloFigura()
         {
-            if(!redondeado)return new[]{new PointF(r.Left,r.Top),new PointF(r.Right,r.Top),new PointF(r.Right,r.Bottom),new PointF(r.Left,r.Bottom)};var pts=new List<PointF>();float radio=System.Math.Min(16,System.Math.Min(r.Width,r.Height)/4f);AgregarArco(pts,r.Right-radio,r.Top+radio,radio,-90,0);AgregarArco(pts,r.Right-radio,r.Bottom-radio,radio,0,90);AgregarArco(pts,r.Left+radio,r.Bottom-radio,radio,90,180);AgregarArco(pts,r.Left+radio,r.Top+radio,radio,180,270);return pts;
         }
-        private static void AgregarArco(List<PointF> p,float cx,float cy,float r,int a0,int a1){for(int a=a0;a<=a1;a+=15){double rad=a*System.Math.PI/180;p.Add(new PointF(cx+(float)System.Math.Cos(rad)*r,cy+(float)System.Math.Sin(rad)*r));}}
+
+        public RectanguloFigura(RectangleF rectangulo, EstiloFigura estilo, bool redondeado)
+            : base(Crear(rectangulo, redondeado), estilo)
+        {
+            Redondeado = redondeado;
+        }
+
+        protected static IEnumerable<PointF> Crear(RectangleF rectangulo, bool redondeado)
+        {
+            if (!redondeado)
+            {
+                return new[]
+                {
+                    new PointF(rectangulo.Left, rectangulo.Top),
+                    new PointF(rectangulo.Right, rectangulo.Top),
+                    new PointF(rectangulo.Right, rectangulo.Bottom),
+                    new PointF(rectangulo.Left, rectangulo.Bottom)
+                };
+            }
+
+            var puntos = new List<PointF>();
+            float radio = System.Math.Min(16, System.Math.Min(rectangulo.Width, rectangulo.Height) / 4f);
+
+            AgregarArco(puntos, rectangulo.Right - radio, rectangulo.Top + radio, radio, -90, 0);
+            AgregarArco(puntos, rectangulo.Right - radio, rectangulo.Bottom - radio, radio, 0, 90);
+            AgregarArco(puntos, rectangulo.Left + radio, rectangulo.Bottom - radio, radio, 90, 180);
+            AgregarArco(puntos, rectangulo.Left + radio, rectangulo.Top + radio, radio, 180, 270);
+
+            return puntos;
+        }
+
+        private static void AgregarArco(
+            List<PointF> puntos,
+            float centroX,
+            float centroY,
+            float radio,
+            int anguloInicial,
+            int anguloFinal)
+        {
+            for (int angulo = anguloInicial; angulo <= anguloFinal; angulo += 15)
+            {
+                double radianes = angulo * System.Math.PI / 180;
+
+                puntos.Add(new PointF(
+                    centroX + (float)System.Math.Cos(radianes) * radio,
+                    centroY + (float)System.Math.Sin(radianes) * radio));
+            }
+        }
     }
 }

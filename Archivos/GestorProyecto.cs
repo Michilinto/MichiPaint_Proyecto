@@ -9,7 +9,12 @@ using Paint_Bolaños_Flores_Venegas.Nucleo;
 
 namespace Paint_Bolaños_Flores_Venegas.Archivos
 {
-    public sealed class PuntoDto { public float X { get; set; } public float Y { get; set; } }
+    public sealed class PuntoDto
+    {
+        public float X { get; set; }
+        public float Y { get; set; }
+    }
+
     public sealed class FiguraDto
     {
         public string Tipo { get; set; }
@@ -32,6 +37,7 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
         public bool Negrita { get; set; }
         public bool Cursiva { get; set; }
     }
+
     public sealed class ProyectoDto
     {
         public int Version { get; set; } = 1;
@@ -45,64 +51,295 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
     {
         public void Guardar(string ruta, DocumentoDibujo documento)
         {
-            if (string.IsNullOrWhiteSpace(ruta)) throw new ArgumentException("Ruta no válida.");
-            var dto = new ProyectoDto { Ancho = documento.Ancho, Alto = documento.Alto, ColorFondo = documento.ColorFondo.ToArgb(), Figuras = documento.Figuras.Select(CrearDto).ToList() };
-            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 100 };
-            File.WriteAllText(ruta, serializer.Serialize(dto), new UTF8Encoding(false)); documento.Modificado = false;
+            if (string.IsNullOrWhiteSpace(ruta))
+            {
+                throw new ArgumentException("Ruta no válida.");
+            }
+
+            var dto = new ProyectoDto
+            {
+                Ancho = documento.Ancho,
+                Alto = documento.Alto,
+                ColorFondo = documento.ColorFondo.ToArgb(),
+                Figuras = documento.Figuras.Select(CrearDto).ToList()
+            };
+
+            var serializador = new JavaScriptSerializer
+            {
+                MaxJsonLength = int.MaxValue,
+                RecursionLimit = 100
+            };
+
+            File.WriteAllText(ruta, serializador.Serialize(dto), new UTF8Encoding(false));
+            documento.Modificado = false;
         }
 
         public DocumentoDibujo Abrir(string ruta)
         {
-            var serializer = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 100 };
-            ProyectoDto dto;
-            try { dto = serializer.Deserialize<ProyectoDto>(File.ReadAllText(ruta, Encoding.UTF8)); }
-            catch (Exception ex) { throw new InvalidDataException("El archivo no contiene un proyecto MichiPaint válido.", ex); }
-            if (dto == null || dto.Version != 1 || dto.Ancho < 100 || dto.Ancho > 4000 || dto.Alto < 100 || dto.Alto > 4000) throw new InvalidDataException("Versión o dimensiones de proyecto no compatibles.");
-            var doc = new DocumentoDibujo(dto.Ancho, dto.Alto) { ColorFondo = Color.FromArgb(dto.ColorFondo) };
-            foreach (var figura in dto.Figuras ?? new List<FiguraDto>()) doc.Agregar(CrearFigura(figura));
-            doc.Modificado = false; return doc;
-        }
-
-        private static FiguraDto CrearDto(Figura2D f)
-        {
-            var d = new FiguraDto
+            var serializador = new JavaScriptSerializer
             {
-                Tipo = f.Tipo, Id = f.Id.ToString(), Puntos = f.PuntosBase.Select(p => new PuntoDto { X = p.X, Y = p.Y }).ToList(),
-                ColorLinea = f.Estilo.ColorLinea.ToArgb(), ColorRelleno = f.Estilo.ColorRelleno.ToArgb(), Grosor = f.Estilo.Grosor,
-                TieneRelleno = f.Estilo.TieneRelleno, Matriz = f.Transformacion.AArreglo()
+                MaxJsonLength = int.MaxValue,
+                RecursionLimit = 100
             };
-            var linea = f as LineaFigura; if (linea != null) d.AlgoritmoLinea = (int)linea.Algoritmo;
-            var elipse = f as ElipseFigura; if (elipse != null) d.AlgoritmoCirculo = (int)elipse.Algoritmo;
-            var poligono = f as PoligonoFigura; if (poligono != null) d.Forma = (int)poligono.Forma;
-            var rect = f as RectanguloFigura; if (rect != null) d.Redondeado = rect.Redondeado;
-            var trazo = f as TrazoFigura; if (trazo != null) { d.EsBorrador = trazo.EsBorrador; d.EsPincel = trazo.EsPincel; }
-            var texto = f as TextoFigura; if (texto != null) { d.Texto=texto.Texto; d.Fuente=texto.Fuente; d.TamanoFuente=texto.TamanoFuente; d.Negrita=texto.Negrita; d.Cursiva=texto.Cursiva; }
-            return d;
+
+            ProyectoDto dto;
+
+            try
+            {
+                dto = serializador.Deserialize<ProyectoDto>(File.ReadAllText(ruta, Encoding.UTF8));
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidDataException("El archivo no contiene un proyecto MichiPaint válido.", ex);
+            }
+
+            ValidarProyecto(dto);
+
+            var documento = new DocumentoDibujo(dto.Ancho, dto.Alto)
+            {
+                ColorFondo = Color.FromArgb(dto.ColorFondo)
+            };
+
+            foreach (var figura in dto.Figuras ?? new List<FiguraDto>())
+            {
+                documento.Agregar(CrearFigura(figura));
+            }
+
+            documento.Modificado = false;
+            return documento;
         }
 
-        private static Figura2D CrearFigura(FiguraDto d)
+        private static void ValidarProyecto(ProyectoDto dto)
         {
-            if (d == null || d.Puntos == null) throw new InvalidDataException("Figura incompleta.");
-            var p = d.Puntos.Select(x => new PointF(x.X, x.Y)).ToList(); Figura2D f;
-            if (d.Tipo == "linea") { var x = new LineaFigura(); x.EstablecerPuntos(p); x.Algoritmo=(AlgoritmoLineaTipo)d.AlgoritmoLinea; f=x; }
-            else if (d.Tipo == "trazo" || d.Tipo == "borrador") { var x=new TrazoFigura(); x.EstablecerPuntos(p); x.EsBorrador=d.EsBorrador || d.Tipo=="borrador"; x.EsPincel=d.EsPincel; f=x; }
-            else if (d.Tipo == "rectangulo" || d.Tipo == "rectangulo_redondeado") { RectanguloFigura x=d.Redondeado||d.Tipo=="rectangulo_redondeado"?(RectanguloFigura)new RectanguloRedondeadoFigura():new RectanguloFigura(); x.EstablecerPuntos(p); f=x; }
-            else if (d.Tipo == "elipse") { var x=new ElipseFigura(); x.EstablecerPuntos(p); x.Algoritmo=(AlgoritmoCirculoTipo)d.AlgoritmoCirculo; f=x; }
-            else if (d.Tipo == "bezier") { var x=new BezierFigura(); x.EstablecerPuntos(p); f=x; }
-            else if (d.Tipo == "texto") { var x=new TextoFigura(); x.EstablecerPuntos(p); x.Texto=d.Texto??""; x.Fuente=d.Fuente??"Microsoft Sans Serif"; x.TamanoFuente=d.TamanoFuente<=0?12:d.TamanoFuente; x.Negrita=d.Negrita; x.Cursiva=d.Cursiva; f=x; }
-            else if (d.Tipo == "relleno_raster") { var x=new RellenoRasterFigura(); x.EstablecerPuntos(p); f=x; }
-            else { var x=new FabricaFigurasPersonalizadas().CrearVacia((FormaPersonalizada)d.Forma); x.EstablecerPuntos(p); f=x; }
-            Guid id; if (Guid.TryParse(d.Id, out id)) f.Id=id;
-            f.Estilo = new EstiloFigura { ColorLinea=Color.FromArgb(d.ColorLinea), ColorRelleno=Color.FromArgb(d.ColorRelleno), Grosor=Math.Max(1,d.Grosor), TieneRelleno=d.TieneRelleno };
-            f.Transformacion = MatrizTransformacion.DesdeArreglo(d.Matriz); return f;
+            bool proyectoInvalido =
+                dto == null ||
+                dto.Version != 1 ||
+                dto.Ancho < 100 ||
+                dto.Ancho > 4000 ||
+                dto.Alto < 100 ||
+                dto.Alto > 4000;
+
+            if (proyectoInvalido)
+            {
+                throw new InvalidDataException("Versión o dimensiones de proyecto no compatibles.");
+            }
+        }
+
+        private static FiguraDto CrearDto(Figura2D figura)
+        {
+            var dto = new FiguraDto
+            {
+                Tipo = figura.Tipo,
+                Id = figura.Id.ToString(),
+                Puntos = figura.PuntosBase.Select(p => new PuntoDto { X = p.X, Y = p.Y }).ToList(),
+                ColorLinea = figura.Estilo.ColorLinea.ToArgb(),
+                ColorRelleno = figura.Estilo.ColorRelleno.ToArgb(),
+                Grosor = figura.Estilo.Grosor,
+                TieneRelleno = figura.Estilo.TieneRelleno,
+                Matriz = figura.Transformacion.AArreglo()
+            };
+
+            CompletarDatosEspecificos(figura, dto);
+            return dto;
+        }
+
+        private static void CompletarDatosEspecificos(Figura2D figura, FiguraDto dto)
+        {
+            var linea = figura as LineaFigura;
+            if (linea != null)
+            {
+                dto.AlgoritmoLinea = (int)linea.Algoritmo;
+            }
+
+            var elipse = figura as ElipseFigura;
+            if (elipse != null)
+            {
+                dto.AlgoritmoCirculo = (int)elipse.Algoritmo;
+            }
+
+            var poligono = figura as PoligonoFigura;
+            if (poligono != null)
+            {
+                dto.Forma = (int)poligono.Forma;
+            }
+
+            var rectangulo = figura as RectanguloFigura;
+            if (rectangulo != null)
+            {
+                dto.Redondeado = rectangulo.Redondeado;
+            }
+
+            var trazo = figura as TrazoFigura;
+            if (trazo != null)
+            {
+                dto.EsBorrador = trazo.EsBorrador;
+                dto.EsPincel = trazo.EsPincel;
+            }
+
+            var texto = figura as TextoFigura;
+            if (texto != null)
+            {
+                dto.Texto = texto.Texto;
+                dto.Fuente = texto.Fuente;
+                dto.TamanoFuente = texto.TamanoFuente;
+                dto.Negrita = texto.Negrita;
+                dto.Cursiva = texto.Cursiva;
+            }
+        }
+
+        private static Figura2D CrearFigura(FiguraDto dto)
+        {
+            if (dto == null || dto.Puntos == null)
+            {
+                throw new InvalidDataException("Figura incompleta.");
+            }
+
+            var puntos = dto.Puntos.Select(p => new PointF(p.X, p.Y)).ToList();
+            Figura2D figura = CrearFiguraPorTipo(dto, puntos);
+
+            Guid id;
+            if (Guid.TryParse(dto.Id, out id))
+            {
+                figura.Id = id;
+            }
+
+            figura.Estilo = new EstiloFigura
+            {
+                ColorLinea = Color.FromArgb(dto.ColorLinea),
+                ColorRelleno = Color.FromArgb(dto.ColorRelleno),
+                Grosor = Math.Max(1, dto.Grosor),
+                TieneRelleno = dto.TieneRelleno
+            };
+
+            figura.Transformacion = MatrizTransformacion.DesdeArreglo(dto.Matriz);
+            return figura;
+        }
+
+        private static Figura2D CrearFiguraPorTipo(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            switch (dto.Tipo)
+            {
+                case "linea":
+                    return CrearLinea(dto, puntos);
+
+                case "trazo":
+                case "borrador":
+                    return CrearTrazo(dto, puntos);
+
+                case "rectangulo":
+                case "rectangulo_redondeado":
+                    return CrearRectangulo(dto, puntos);
+
+                case "elipse":
+                    return CrearElipse(dto, puntos);
+
+                case "bezier":
+                    return CrearBezier(puntos);
+
+                case "texto":
+                    return CrearTexto(dto, puntos);
+
+                case "relleno_raster":
+                    return CrearRellenoRaster(puntos);
+
+                default:
+                    return CrearPersonalizada(dto, puntos);
+            }
+        }
+
+        private static Figura2D CrearLinea(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            var linea = new LineaFigura
+            {
+                Algoritmo = (AlgoritmoLineaTipo)dto.AlgoritmoLinea
+            };
+
+            linea.EstablecerPuntos(puntos);
+            return linea;
+        }
+
+        private static Figura2D CrearTrazo(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            var trazo = new TrazoFigura
+            {
+                EsBorrador = dto.EsBorrador || dto.Tipo == "borrador",
+                EsPincel = dto.EsPincel
+            };
+
+            trazo.EstablecerPuntos(puntos);
+            return trazo;
+        }
+
+        private static Figura2D CrearRectangulo(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            RectanguloFigura rectangulo =
+                dto.Redondeado || dto.Tipo == "rectangulo_redondeado"
+                    ? (RectanguloFigura)new RectanguloRedondeadoFigura()
+                    : new RectanguloFigura();
+
+            rectangulo.EstablecerPuntos(puntos);
+            return rectangulo;
+        }
+
+        private static Figura2D CrearElipse(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            var elipse = new ElipseFigura
+            {
+                Algoritmo = (AlgoritmoCirculoTipo)dto.AlgoritmoCirculo
+            };
+
+            elipse.EstablecerPuntos(puntos);
+            return elipse;
+        }
+
+        private static Figura2D CrearBezier(IEnumerable<PointF> puntos)
+        {
+            var bezier = new BezierFigura();
+            bezier.EstablecerPuntos(puntos);
+            return bezier;
+        }
+
+        private static Figura2D CrearTexto(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            var texto = new TextoFigura
+            {
+                Texto = dto.Texto ?? string.Empty,
+                Fuente = dto.Fuente ?? "Microsoft Sans Serif",
+                TamanoFuente = dto.TamanoFuente <= 0 ? 12 : dto.TamanoFuente,
+                Negrita = dto.Negrita,
+                Cursiva = dto.Cursiva
+            };
+
+            texto.EstablecerPuntos(puntos);
+            return texto;
+        }
+
+        private static Figura2D CrearRellenoRaster(IEnumerable<PointF> puntos)
+        {
+            var relleno = new RellenoRasterFigura();
+            relleno.EstablecerPuntos(puntos);
+            return relleno;
+        }
+
+        private static Figura2D CrearPersonalizada(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            var figura = new FabricaFigurasPersonalizadas().CrearVacia((FormaPersonalizada)dto.Forma);
+            figura.EstablecerPuntos(puntos);
+            return figura;
         }
     }
 
     public sealed class ExportadorImagen
     {
-        public void ExportarPng(string ruta, DocumentoDibujo documento, RasterizadorDocumento rasterizador)
+        public void ExportarPng(
+            string ruta,
+            DocumentoDibujo documento,
+            RasterizadorDocumento rasterizador)
         {
-            using (var bmp = rasterizador.Renderizar(documento)) bmp.Save(ruta, System.Drawing.Imaging.ImageFormat.Png);
+            using (var bitmap = rasterizador.Renderizar(documento))
+            {
+                bitmap.Save(ruta, System.Drawing.Imaging.ImageFormat.Png);
+            }
         }
     }
 }
