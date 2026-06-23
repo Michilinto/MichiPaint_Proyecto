@@ -775,6 +775,14 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
 
         private void AplicarRelleno(Point semilla)
         {
+            var figuraEditable = BuscarFiguraCerradaEnPunto(semilla);
+
+            if (figuraEditable != null)
+            {
+                AplicarRellenoAEstilo(figuraEditable);
+                return;
+            }
+
             var buffer = Rasterizador.RenderizarBuffer(Documento);
             var tramos = new RellenoFloodFill().RellenarTramos(buffer, semilla, EstiloActual.ColorRelleno);
 
@@ -784,6 +792,40 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
                 Historial.Ejecutar(new ComandoAgregar(Documento, figura));
             }
 
+            Cambio();
+        }
+
+        private Figura2D BuscarFiguraCerradaEnPunto(Point punto)
+        {
+            PointF posicion = new PointF(punto.X, punto.Y);
+
+            return Documento.Figuras
+                .Reverse()
+                .Where(figura => !(figura is RellenoRasterFigura))
+                .Where(EsFiguraCerradaRellenable)
+                .FirstOrDefault(figura => figura.Contiene(posicion));
+        }
+
+        private static bool EsFiguraCerradaRellenable(Figura2D figura)
+        {
+            var poligono = figura as PoligonoFigura;
+
+            if (poligono != null)
+            {
+                return poligono.Cerrado;
+            }
+
+            return figura is ElipseFigura;
+        }
+
+        private void AplicarRellenoAEstilo(Figura2D figura)
+        {
+            var nuevoEstilo = figura.Estilo.Clonar();
+            nuevoEstilo.ColorRelleno = EstiloActual.ColorRelleno;
+            nuevoEstilo.TieneRelleno = true;
+
+            Historial.Ejecutar(new ComandoEstilo(Documento, new[] { figura }, nuevoEstilo));
+            SeleccionarFiguraReciente(figura);
             Cambio();
         }
 
@@ -1091,6 +1133,7 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
             if (figura != null)
             {
                 seleccion.Add(figura);
+                AgregarRellenosRasterAsociados(figura);
             }
 
             NotificarSeleccion();
@@ -1100,8 +1143,41 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         {
             seleccion.Clear();
             seleccion.Add(figura);
+            AgregarRellenosRasterAsociados(figura);
             editandoFiguraReciente = true;
             NotificarSeleccion();
+        }
+
+        private void AgregarRellenosRasterAsociados(Figura2D figura)
+        {
+            if (figura == null || figura is RellenoRasterFigura)
+            {
+                return;
+            }
+
+            foreach (var relleno in Documento.Figuras.OfType<RellenoRasterFigura>())
+            {
+                if (!seleccion.Contains(relleno) && RellenoPerteneceAFigura(relleno, figura))
+                {
+                    seleccion.Add(relleno);
+                }
+            }
+        }
+
+        private static bool RellenoPerteneceAFigura(RellenoRasterFigura relleno, Figura2D figura)
+        {
+            RectangleF limites = relleno.ObtenerLimites();
+
+            if (limites.IsEmpty)
+            {
+                return false;
+            }
+
+            PointF centro = new PointF(
+                limites.Left + limites.Width / 2f,
+                limites.Top + limites.Height / 2f);
+
+            return figura.Contiene(centro, 2);
         }
 
         private bool EsHerramientaTrazoLibre()
@@ -1125,7 +1201,8 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
 
         private void NotificarSeleccion()
         {
-            SeleccionActualizada?.Invoke(seleccion.Count);
+            int figurasVisibles = seleccion.Count(figura => !(figura is RellenoRasterFigura));
+            SeleccionActualizada?.Invoke(figurasVisibles);
         }
 
         private void Cambio()

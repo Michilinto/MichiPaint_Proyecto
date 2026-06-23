@@ -36,17 +36,15 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         public override void Rasterizar(ContextoRaster contexto)
         {
             var transformados = PuntosTransformados;
+            contexto.Linea = new LineaBresenham();
 
             for (int i = 0; i + 1 < transformados.Count; i += 2)
             {
-                int y = (int)Math.Round(transformados[i].Y);
-                int inicio = (int)Math.Round(Math.Min(transformados[i].X, transformados[i + 1].X));
-                int fin = (int)Math.Round(Math.Max(transformados[i].X, transformados[i + 1].X));
-
-                for (int x = inicio; x <= fin; x++)
-                {
-                    contexto.Buffer.PonerPixel(x, y, Estilo.ColorRelleno);
-                }
+                contexto.DibujarSegmento(
+                    transformados[i],
+                    transformados[i + 1],
+                    Estilo.ColorRelleno,
+                    1);
             }
         }
 
