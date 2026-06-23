@@ -987,7 +987,13 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
 
         private void TeclaPresionada(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
+            if (e.Control && e.KeyCode == Keys.V)
+            {
+                PegarImagenDesdePortapapeles();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Escape)
             {
                 gestor?.Cancelar();
             }
@@ -999,6 +1005,58 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             {
                 gestor.DobleClic(Point.Empty);
             }
+        }
+
+        private void PegarImagenDesdePortapapeles()
+        {
+            if (documento == null || historial == null || Clipboard.ContainsImage() == false)
+            {
+                return;
+            }
+
+            try
+            {
+                using (var imagenPortapapeles = Clipboard.GetImage())
+                {
+                    if (imagenPortapapeles == null)
+                    {
+                        return;
+                    }
+
+                    RectangleF destino = CalcularDestinoImagenPegada(imagenPortapapeles.Size);
+                    var figura = new ImagenFigura(imagenPortapapeles, destino);
+
+                    gestor?.Cancelar();
+                    historial.Ejecutar(new ComandoAgregar(documento, figura));
+                    estadoHerramienta.Text = "Imagen pegada desde el portapapeles";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    this,
+                    ex.Message,
+                    "No se pudo pegar la imagen",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private RectangleF CalcularDestinoImagenPegada(Size tamano)
+        {
+            float ancho = Math.Max(1, tamano.Width);
+            float alto = Math.Max(1, tamano.Height);
+            float maximoAncho = documento.Ancho * .8f;
+            float maximoAlto = documento.Alto * .8f;
+            float escala = Math.Min(1f, Math.Min(maximoAncho / ancho, maximoAlto / alto));
+
+            ancho *= escala;
+            alto *= escala;
+
+            float x = (documento.Ancho - ancho) / 2f;
+            float y = (documento.Alto - alto) / 2f;
+
+            return new RectangleF(x, y, ancho, alto);
         }
 
         private void EstablecerZoom(int porcentaje)

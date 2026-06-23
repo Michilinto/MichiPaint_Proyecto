@@ -36,6 +36,7 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
         public float TamanoFuente { get; set; }
         public bool Negrita { get; set; }
         public bool Cursiva { get; set; }
+        public string ImagenPngBase64 { get; set; }
     }
 
     public sealed class ProyectoDto
@@ -185,6 +186,12 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
                 dto.Negrita = texto.Negrita;
                 dto.Cursiva = texto.Cursiva;
             }
+
+            var imagen = figura as ImagenFigura;
+            if (imagen != null && imagen.DatosPng != null)
+            {
+                dto.ImagenPngBase64 = Convert.ToBase64String(imagen.DatosPng);
+            }
         }
 
         private static Figura2D CrearFigura(FiguraDto dto)
@@ -241,6 +248,9 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
 
                 case "relleno_raster":
                     return CrearRellenoRaster(puntos);
+
+                case "imagen":
+                    return CrearImagen(dto, puntos);
 
                 default:
                     return CrearPersonalizada(dto, puntos);
@@ -319,6 +329,22 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
             var relleno = new RellenoRasterFigura();
             relleno.EstablecerPuntos(puntos);
             return relleno;
+        }
+
+        private static Figura2D CrearImagen(FiguraDto dto, IEnumerable<PointF> puntos)
+        {
+            if (string.IsNullOrWhiteSpace(dto.ImagenPngBase64))
+            {
+                throw new InvalidDataException("Imagen incompleta.");
+            }
+
+            var imagen = new ImagenFigura
+            {
+                DatosPng = Convert.FromBase64String(dto.ImagenPngBase64)
+            };
+
+            imagen.EstablecerPuntos(puntos);
+            return imagen;
         }
 
         private static Figura2D CrearPersonalizada(FiguraDto dto, IEnumerable<PointF> puntos)

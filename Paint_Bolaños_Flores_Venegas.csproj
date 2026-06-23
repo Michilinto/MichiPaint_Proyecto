@@ -73,6 +73,7 @@
     <Compile Include="Nucleo\Figuras\ElipseFigura.cs" />
     <Compile Include="Nucleo\Figuras\BezierFigura.cs" />
     <Compile Include="Nucleo\Figuras\TextoFigura.cs" />
+    <Compile Include="Nucleo\Figuras\ImagenFigura.cs" />
     <Compile Include="Nucleo\Figuras\RellenoRasterFigura.cs" />
     <Compile Include="Nucleo\Figuras\FiguraPersonalizadaBase.cs" />
     <Compile Include="Nucleo\Figuras\CorazonFigura.cs" />
