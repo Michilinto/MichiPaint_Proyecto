@@ -26,6 +26,8 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
         private readonly Dictionary<HerramientaTipo, Button> botones = new Dictionary<HerramientaTipo, Button>();
         private string rutaProyecto;
         private Font fuenteTexto = new Font("Microsoft Sans Serif", 12);
+        private int grosorValor = 2;
+        private bool arrastrandoGrosor;
 
         public MichiPaint()
         {
@@ -48,39 +50,64 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             botones.Add(HerramientaTipo.SeleccionLibre, btnSeleccionLibre);
             botones.Add(HerramientaTipo.Seleccion, btnSeleccion);
             botones.Add(HerramientaTipo.RectanguloRedondeado, btnRectanguloRedondeado); 
-            botones.Add(HerramientaTipo.Zoom, btnZoom); botones.Add(HerramientaTipo.Elipse, btnElipse);
-            ConfigurarBoton(btnBorrador,HerramientaTipo.Borrador,"1.png","Borrador"); 
+            botones.Add(HerramientaTipo.Elipse, btnElipse);
+            ConfigurarBoton(btnBorrador,HerramientaTipo.Borrador,"1.png","Borrador: grosor ajustable"); 
             ConfigurarBoton(btnLinea,HerramientaTipo.Linea,"2.png","Línea"); 
             ConfigurarBoton(btnCurva,HerramientaTipo.Curva,"3.png","Curva Bézier"); 
-            ConfigurarBoton(btnPincel,HerramientaTipo.Pincel,"4.png","Pincel");
+            ConfigurarBoton(btnPincel,HerramientaTipo.Pincel,"4.png","Pincel: punta circular con grosor ajustable");
             ConfigurarBoton(btnRelleno,HerramientaTipo.Relleno,"5.png","Balde de relleno");
-            ConfigurarBoton(btnLapiz,HerramientaTipo.Lapiz,"6.png","Lápiz");
+            ConfigurarBoton(btnLapiz,HerramientaTipo.Lapiz,"6.png","Lápiz: punta cuadrada y borde pixelado");
             ConfigurarBoton(btnTexto,HerramientaTipo.Texto,"7.png","Texto"); 
             ConfigurarBoton(btnPoligono,HerramientaTipo.Poligono,"8.png","Polígono y figuras");
             ConfigurarBoton(btnRectangulo,HerramientaTipo.Rectangulo,"9.png","Rectángulo"); 
             ConfigurarBoton(btnSeleccionLibre,HerramientaTipo.SeleccionLibre,"10.png","Selección libre"); 
             ConfigurarBoton(btnSeleccion,HerramientaTipo.Seleccion,"11.png","Seleccionar"); 
             ConfigurarBoton(btnRectanguloRedondeado,HerramientaTipo.RectanguloRedondeado,"12.png","Rectángulo redondeado");
-            ConfigurarBoton(btnZoom,HerramientaTipo.Zoom,"13.png","Zoom"); 
             ConfigurarBoton(btnElipse,HerramientaTipo.Elipse,"15.png","Círculo o elipse");
             btnLimpiar.BackColor=Crema;btnLimpiar.ForeColor=Marron;btnLimpiar.FlatStyle=FlatStyle.Flat;
             btnLimpiar.FlatAppearance.BorderColor=Marron;btnLimpiar.FlatAppearance.MouseOverBackColor=Amarillo;
             btnLimpiar.Image=CargarIcono("14.png",38);btnLimpiar.ImageAlign=ContentAlignment.MiddleCenter;
             ayuda.SetToolTip(btnLimpiar,"Limpiar lienzo");btnLimpiar.Click+=(s,e)=>Limpiar();
-            btnPoligono.MouseUp+=(s,e)=>{if(e.Button==MouseButtons.Right)MostrarGaleria(btnPoligono);};
             btnFuente.BackColor=Amarillo;
             btnFuente.ForeColor=Marron;
             btnFuente.FlatAppearance.BorderColor=Marron;
+            btnFuente.FlatAppearance.BorderSize=2;
             btnFuente.Click+=(s,e)=>ElegirFuente();
             foreach(Control c in panelOpciones.Controls)c.ForeColor=Marron;
+            // mejoras visuales del panel de opciones
+            lblGrosor.Font=new Font("Consolas",8f,FontStyle.Bold);
+            ConfigurarGrosorPersonalizado();
+            usarRelleno.FlatStyle=FlatStyle.Flat;
+            usarRelleno.FlatAppearance.BorderColor=Marron;
+            usarRelleno.Font=new Font("Consolas",8.5f);
+            usarRelleno.Padding=new Padding(2,1,0,1);
+            lblFigura.Font=new Font("Consolas",8f,FontStyle.Bold);
+            selectorFigura.Font=new Font("Consolas",8f);
+            selectorFigura.ForeColor=Marron;
+            grosorFigura.Font=new Font("Consolas",8f);
+            grosorFigura.ForeColor=Marron;
+            // eventos de transformacion (el panel ahora es visible)
+            btnAplicarTraslacion.FlatAppearance.BorderColor=Marron;
+            btnAplicarTraslacion.FlatAppearance.BorderSize=2;
+            btnAplicarTraslacion.FlatAppearance.MouseOverBackColor=Amarillo;
+            btnAplicarTraslacion.Click+=(s,e)=>AplicarTraslacion();
+            btnAplicarRotacion.FlatAppearance.BorderColor=Marron;
+            btnAplicarRotacion.FlatAppearance.BorderSize=2;
+            btnAplicarRotacion.FlatAppearance.MouseOverBackColor=Amarillo;
+            btnAplicarRotacion.Click+=(s,e)=>AplicarRotacion();
+            btnAplicarEscala.FlatAppearance.BorderColor=Marron;
+            btnAplicarEscala.FlatAppearance.BorderSize=2;
+            btnAplicarEscala.FlatAppearance.MouseOverBackColor=Amarillo;
+            btnAplicarEscala.Click+=(s,e)=>AplicarEscala();
             lblColoresActuales.ForeColor=Marron;
             CrearMuestrasColor();
             ConfigurarMenusEIconos();
-            ConfigurarTransformacionesYColor();
-            grosor.ValueChanged+=(s,e)=>ActualizarEstilo(); 
+            ConfigurarColorPersonalizado();
+            grosorFigura.SelectedIndexChanged+=(s,e)=>ActualizarEstilo();
+            grosorFigura.SelectedIndex=1;
             usarRelleno.CheckedChanged+=(s,e)=>ActualizarEstilo();
-            algoritmoLinea.SelectedIndexChanged+=(s,e)=>{if(gestor!=null)gestor.AlgoritmoLinea=(AlgoritmoLineaTipo)algoritmoLinea.SelectedIndex;};
-            algoritmoCirculo.SelectedIndexChanged+=(s,e)=>{if(gestor!=null)gestor.AlgoritmoCirculo=(AlgoritmoCirculoTipo)algoritmoCirculo.SelectedIndex;};
+            selectorFigura.SelectedIndexChanged+=(s,e)=>SeleccionarFiguraVisible();
+            selectorFigura.SelectedIndex=0;
             zoom.SelectedIndexChanged+=(s,e)=>EstablecerZoom(new[]{25,50,100,200,400}[zoom.SelectedIndex]);
             lienzoControl.CoordenadaCambio+=p=>estadoCoordenadas.Text=$"X: {(int)p.X}  Y: {(int)p.Y}";
             FormClosing+=AlCerrar;
@@ -142,12 +169,65 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             var boton=new Button{BackColor=color,Size=new Size(25,25),Margin=new Padding(1),FlatStyle=FlatStyle.Flat,Tag=color.ToArgb()};boton.FlatAppearance.BorderColor=Marron;boton.MouseDown+=(s,e)=>AsignarColor(((Button)s).BackColor,e.Button);flujoPaleta.Controls.Add(boton);
         }
 
-        private void ConfigurarTransformacionesYColor()
+        private void ConfigurarColorPersonalizado()
         {
             btnColorPersonalizado.BackColor=Amarillo;btnColorPersonalizado.ForeColor=Marron;btnColorPersonalizado.FlatAppearance.BorderColor=Marron;btnColorPersonalizado.MouseDown+=(s,e)=>ElegirColorPersonalizado(e.Button);ayuda.SetToolTip(btnColorPersonalizado,"Clic izquierdo: color de linea. Clic derecho: color de relleno.");
-            panelTransformaciones.ForeColor=Marron;foreach(Control control in panelTransformaciones.Controls)control.ForeColor=Marron;
-            foreach(var boton in new[]{btnAplicarTraslacion,btnAplicarRotacion,btnAplicarEscala}){boton.BackColor=Amarillo;boton.FlatAppearance.BorderColor=Marron;boton.FlatAppearance.MouseOverBackColor=Rosa;}
-            btnAplicarTraslacion.Click+=(s,e)=>AplicarTraslacion();btnAplicarRotacion.Click+=(s,e)=>AplicarRotacion();btnAplicarEscala.Click+=(s,e)=>AplicarEscala();
+        }
+
+        private void ConfigurarGrosorPersonalizado()
+        {
+            panelGrosor.Cursor=barraGrosor.Cursor=rellenoGrosor.Cursor=perillaGrosor.Cursor=Cursors.Hand;
+            panelGrosor.BackColor=Lienzo;
+            barraGrosor.BackColor=Crema;
+            rellenoGrosor.BackColor=Rosa;
+            perillaGrosor.BackColor=Amarillo;
+            ayuda.SetToolTip(panelGrosor,"Arrastra o haz clic para cambiar el grosor");
+            ayuda.SetToolTip(perillaGrosor,"Grosor del lapiz, pincel o borrador");
+            MouseEventHandler iniciar=(s,e)=>{arrastrandoGrosor=true;ActualizarGrosorDesdeControl(s,e);};
+            MouseEventHandler mover=(s,e)=>{if(arrastrandoGrosor)ActualizarGrosorDesdeControl(s,e);};
+            MouseEventHandler terminar=(s,e)=>arrastrandoGrosor=false;
+            foreach(Control c in new Control[]{panelGrosor,barraGrosor,rellenoGrosor,perillaGrosor})
+            {
+                c.MouseDown+=iniciar;
+                c.MouseMove+=mover;
+                c.MouseUp+=terminar;
+                c.MouseLeave+=(s,e)=>{if(MouseButtons!=MouseButtons.Left)arrastrandoGrosor=false;};
+            }
+            ActualizarVistaGrosor();
+        }
+
+        private void ActualizarGrosorDesdeControl(object origen,MouseEventArgs e)
+        {
+            int x;
+            if(origen==barraGrosor||origen==rellenoGrosor)x=barraGrosor.Left+e.X;
+            else if(origen==perillaGrosor)x=perillaGrosor.Left+e.X;
+            else x=e.X;
+            int inicio=barraGrosor.Left;
+            int ancho=Math.Max(1,barraGrosor.Width-2);
+            float t=Math.Max(0,Math.Min(1,(x-inicio)/(float)ancho));
+            grosorValor=Math.Max(1,Math.Min(100,1+(int)Math.Round(t*99)));
+            ActualizarVistaGrosor();
+            ActualizarEstilo();
+        }
+
+        private void ActualizarVistaGrosor()
+        {
+            lblValorGrosor.Text=$"{grosorValor} px";
+            lblGrosor.Text="Grosor";
+            int ancho=Math.Max(1,barraGrosor.Width-2);
+            float t=(grosorValor-1)/99f;
+            int relleno=Math.Max(1,(int)Math.Round(ancho*t));
+            rellenoGrosor.Width=relleno;
+            int centro=barraGrosor.Left+(int)Math.Round(ancho*t);
+            perillaGrosor.Left=Math.Max(0,Math.Min(panelGrosor.Width-perillaGrosor.Width,centro-perillaGrosor.Width/2));
+        }
+
+        private void SeleccionarFiguraVisible()
+        {
+            if(gestor==null||selectorFigura.SelectedIndex<0)return;
+            gestor.FormaActual=(FormaPersonalizada)selectorFigura.SelectedIndex;
+            SeleccionarHerramienta(HerramientaTipo.Poligono,btnPoligono);
+            estadoHerramienta.Text=selectorFigura.SelectedItem.ToString();
         }
 
         private void ElegirColorPersonalizado(MouseButtons destino)
@@ -184,8 +264,37 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
 
         private void SeleccionarHerramienta(HerramientaTipo tipo,Button boton)
         {
-            if(gestor==null)return;gestor.Cancelar();gestor.HerramientaActual=tipo;foreach(var b in botones.Values){b.BackColor=Crema;b.FlatAppearance.BorderSize=2;}boton.BackColor=Rosa;boton.FlatAppearance.BorderSize=3;estadoHerramienta.Text=ayuda.GetToolTip(boton);
+            if(gestor==null)return;gestor.Cancelar();gestor.HerramientaActual=tipo;foreach(var b in botones.Values){b.BackColor=Crema;b.FlatAppearance.BorderSize=2;}boton.BackColor=Rosa;boton.FlatAppearance.BorderSize=3;estadoHerramienta.Text=ayuda.GetToolTip(boton);ActualizarControlGrosor(tipo);
             if(tipo==HerramientaTipo.Zoom)zoom.SelectedIndex=zoom.SelectedIndex==zoom.Items.Count-1?2:zoom.SelectedIndex+1;
+        }
+
+        private static bool EsHerramientaTrazo(HerramientaTipo tipo)
+        {
+            return tipo==HerramientaTipo.Lapiz||tipo==HerramientaTipo.Pincel||tipo==HerramientaTipo.Borrador;
+        }
+
+        private static bool EsHerramientaFigura(HerramientaTipo tipo)
+        {
+            return tipo==HerramientaTipo.Linea||tipo==HerramientaTipo.Curva||
+                tipo==HerramientaTipo.Rectangulo||tipo==HerramientaTipo.RectanguloRedondeado||
+                tipo==HerramientaTipo.Elipse||tipo==HerramientaTipo.Poligono;
+        }
+
+        private void ActualizarControlGrosor(HerramientaTipo tipo)
+        {
+            bool trazo=EsHerramientaTrazo(tipo),figura=EsHerramientaFigura(tipo);
+            bool texto=tipo==HerramientaTipo.Texto;
+            bool poligono=tipo==HerramientaTipo.Poligono;
+            lblGrosor.Visible=trazo||figura;
+            panelGrosor.Visible=trazo;panelGrosor.Enabled=trazo;
+            grosorFigura.Visible=figura;grosorFigura.Enabled=figura;
+            usarRelleno.Visible=figura;usarRelleno.Enabled=figura;
+            lblFigura.Visible=poligono;
+            selectorFigura.Visible=poligono;
+            btnFuente.Visible=texto;
+            lblGrosor.Text=trazo?"Grosor":figura?"Grosor figura":"";
+            ActualizarVistaGrosor();
+            ActualizarEstilo();
         }
 
         private void MostrarGaleria(Control control)
@@ -193,7 +302,7 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             var cm=new ContextMenuStrip{BackColor=Crema,ForeColor=Marron};foreach(FormaPersonalizada forma in Enum.GetValues(typeof(FormaPersonalizada))){var item=new ToolStripMenuItem(forma==FormaPersonalizada.Poligono?"Polígono libre":forma.ToString());item.Click+=(s,e)=>{gestor.FormaActual=forma;SeleccionarHerramienta(HerramientaTipo.Poligono,btnPoligono);estadoHerramienta.Text=item.Text;};cm.Items.Add(item);}cm.Show(control,new Point(control.Width,0));
         }
 
-        private void ActualizarEstilo(){if(gestor==null)return;gestor.EstiloActual.Grosor=(int)grosor.Value;gestor.EstiloActual.TieneRelleno=usarRelleno.Checked;gestor.AplicarEstiloASeleccion();}
+        private void ActualizarEstilo(){if(gestor==null)return;if(EsHerramientaTrazo(gestor.HerramientaActual))gestor.EstiloActual.Grosor=grosorValor;else if(EsHerramientaFigura(gestor.HerramientaActual)&&grosorFigura.SelectedIndex>=0)gestor.EstiloActual.Grosor=new[]{1,3,5,8}[grosorFigura.SelectedIndex];gestor.EstiloActual.TieneRelleno=usarRelleno.Checked;gestor.AplicarEstiloASeleccion();}
         private void AsignarColor(Color color,MouseButtons boton){if(gestor==null)return;bool aplicadoPorActivacion=false;if(boton==MouseButtons.Right){gestor.EstiloActual.ColorRelleno=color;muestraRelleno.BackColor=color;if(!usarRelleno.Checked){usarRelleno.Checked=true;aplicadoPorActivacion=true;}estadoHerramienta.Text=$"Relleno: #{color.R:X2}{color.G:X2}{color.B:X2}";}else{gestor.EstiloActual.ColorLinea=color;muestraLinea.BackColor=color;estadoHerramienta.Text=$"Linea: #{color.R:X2}{color.G:X2}{color.B:X2}";}if(!aplicadoPorActivacion)gestor.AplicarEstiloASeleccion();}
         private void ElegirFuente(){using(var d=new FontDialog{Font=fuenteTexto})if(d.ShowDialog(this)==DialogResult.OK){fuenteTexto?.Dispose();fuenteTexto=(Font)d.Font.Clone();gestor.FuenteTexto=fuenteTexto;}}
         private void SolicitarTexto(PointF p){var existente=gestor.Seleccion.OfType<TextoFigura>().FirstOrDefault(x=>x.Contiene(p));string texto=DialogoTexto.Mostrar(this,existente?.Texto??"");if(texto!=null)gestor.AgregarTexto(p,texto);}
@@ -213,7 +322,7 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
         private void EstablecerZoom(int porcentaje){int indice=Array.IndexOf(new[]{25,50,100,200,400},porcentaje);if(indice>=0&&zoom.SelectedIndex!=indice){zoom.SelectedIndex=indice;return;}lienzoControl?.EstablecerZoom(porcentaje/100f);estadoHerramienta.Text=$"Zoom {porcentaje} %";}
         private void ActualizarTitulo(){Text=$"{(documento!=null&&documento.Modificado?"*":"")}{(string.IsNullOrEmpty(rutaProyecto)?"Sin título":Path.GetFileName(rutaProyecto))} - MichiPaint";}
         private void ActualizarHistorial(){bool d=historial?.PuedeDeshacer==true,r=historial?.PuedeRehacer==true;itemDeshacer.Enabled=rapidoDeshacer.Enabled=d;itemRehacer.Enabled=rapidoRehacer.Enabled=r;}
-        private void MostrarAyuda(){MessageBox.Show(this,"Dibuja arrastrando sobre el lienzo.\n\nPolígono: clic por vértice y doble clic o Enter para cerrar.\nBézier: marca cuatro puntos.\nSelección: arrastra para mover; usa los tiradores para escalar y rotar.\nClic izquierdo en un color: contorno. Clic derecho: relleno.","Controles de MichiPaint",MessageBoxButtons.OK,MessageBoxIcon.Information);}
+        private void MostrarAyuda(){MessageBox.Show(this,"Dibuja arrastrando sobre el lienzo.\n\nPolígono: primer clic para iniciar, mueve el cursor para previsualizar cada línea, clic para fijar cada vértice y doble clic o Enter para cerrar.\nBézier: el primer clic fija el inicio; el segundo forma el grado 1, el tercero el grado 2 y el cuarto crea y confirma el grado 3. Mueve el cursor para previsualizar cada grado.\nSelección: arrastra para mover; usa los tiradores para escalar y rotar.\nClic izquierdo en un color: contorno. Clic derecho: relleno.","Controles de MichiPaint",MessageBoxButtons.OK,MessageBoxIcon.Information);}
         private void MostrarAcerca(){MessageBox.Show(this,"MichiPaint\nProyecto de Computación Gráfica\n\nRasterización, transformaciones y rellenos implementados con algoritmos propios.","Acerca de",MessageBoxButtons.OK,MessageBoxIcon.Information);}
 
         private Image CargarIcono(string nombre,int tamano)

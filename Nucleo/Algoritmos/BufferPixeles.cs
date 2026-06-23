@@ -24,9 +24,19 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
 
         public void PonerPixelGrueso(int x,int y,Color color,int grosor)
         {
-            int radio=Math.Max(0,grosor-1)/2;
-            for(int dy=-radio;dy<=radio;dy++)for(int dx=-radio;dx<=radio;dx++)
-                if(dx*dx+dy*dy<=radio*radio+radio)PonerPixel(x+dx,y+dy,color);
+            grosor=Math.Max(1,grosor);float centro=(grosor-1)/2f,radio=Math.Max(.5f,grosor/2f-.25f);int origen=-(grosor/2);
+            for(int fila=0;fila<grosor;fila++)for(int columna=0;columna<grosor;columna++)
+            {
+                float dx=columna-centro,dy=fila-centro;
+                if(dx*dx+dy*dy<=radio*radio)PonerPixel(x+origen+columna,y+origen+fila,color);
+            }
+        }
+
+        public void PonerPixelCuadrado(int x,int y,Color color,int grosor)
+        {
+            grosor=Math.Max(1,grosor);int origen=-(grosor/2);
+            for(int fila=0;fila<grosor;fila++)for(int columna=0;columna<grosor;columna++)
+                PonerPixel(x+origen+columna,y+origen+fila,color);
         }
 
         public Bitmap CrearBitmap()

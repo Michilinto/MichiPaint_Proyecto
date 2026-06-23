@@ -51,7 +51,7 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             base.OnPaint(e); if (imagen == null) return;
             e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor; e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
             e.Graphics.DrawImage(imagen, ClientRectangle, new Rectangle(0,0,imagen.Width,imagen.Height), GraphicsUnit.Pixel);
-            DibujarSeleccion(e.Graphics); DibujarLazo(e.Graphics);
+            DibujarSeleccion(e.Graphics); DibujarLazo(e.Graphics); DibujarInicioPoligono(e.Graphics); DibujarPuntosCurva(e.Graphics);
         }
 
         private void DibujarSeleccion(Graphics g)
@@ -68,14 +68,36 @@ namespace Paint_Bolaños_Flores_Venegas.Vistas
             if (gestor == null || gestor.Lazo.Count < 2) return; using(var pen=new Pen(Color.FromArgb(131,94,72),1){DashStyle=DashStyle.Dot})
             { for(int i=1;i<gestor.Lazo.Count;i++) g.DrawLine(pen,APantalla(gestor.Lazo[i-1]),APantalla(gestor.Lazo[i])); }
         }
+        private void DibujarInicioPoligono(Graphics g)
+        {
+            if(gestor==null||gestor.HerramientaActual!=HerramientaTipo.Poligono||gestor.FormaActual!=FormaPersonalizada.Poligono||!gestor.PuntoInicialPoligono.HasValue)return;
+            PointF p=APantalla(gestor.PuntoInicialPoligono.Value);using(var brocha=new SolidBrush(Color.FromArgb(241,216,132)))using(var lapiz=new Pen(Color.FromArgb(131,94,72),2)){var r=new RectangleF(p.X-5,p.Y-5,10,10);g.FillEllipse(brocha,r);g.DrawEllipse(lapiz,r);}
+        }
+
+        private void DibujarPuntosCurva(Graphics g)
+        {
+            if (gestor == null || !gestor.ConstruyendoCurva) return;
+            var puntos = gestor.PuntosCurvaEnConstruccion.Select(APantalla).ToArray();
+            if (puntos.Length > 1)
+                using (var guia = new Pen(Color.FromArgb(131, 94, 72), 1) { DashStyle = DashStyle.Dot })
+                    g.DrawLines(guia, puntos);
+            using (var fondo = new SolidBrush(Color.FromArgb(241, 216, 132)))
+            using (var borde = new Pen(Color.FromArgb(131, 94, 72), 1))
+                for (int i = 0; i < puntos.Length; i++)
+                {
+                    var r = new RectangleF(puntos[i].X - 4, puntos[i].Y - 4, 8, 8);
+                    g.FillRectangle(fondo, r);
+                    g.DrawRectangle(borde, r.X, r.Y, r.Width, r.Height);
+                }
+        }
 
         protected override void OnMouseDown(MouseEventArgs e) { base.OnMouseDown(e); if(e.Button==MouseButtons.Left) { Focus(); gestor?.Iniciar(ADocumento(e.Location)); } }
-        protected override void OnMouseMove(MouseEventArgs e) { base.OnMouseMove(e); var p=ADocumento(e.Location); CoordenadaCambio?.Invoke(p); if(e.Button==MouseButtons.Left) gestor?.Mover(p); else ActualizarCursor(p); }
+        protected override void OnMouseMove(MouseEventArgs e) { base.OnMouseMove(e); var p=ADocumento(e.Location); CoordenadaCambio?.Invoke(p); if(e.Button==MouseButtons.Left||(gestor?.HerramientaActual==HerramientaTipo.Poligono&&gestor.EditandoFiguraReciente==false)||gestor?.ConstruyendoCurva==true) gestor?.Mover(p); else ActualizarCursor(p); }
         protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); if(e.Button==MouseButtons.Left) gestor?.Terminar(ADocumento(e.Location)); }
         protected override void OnMouseDoubleClick(MouseEventArgs e) { base.OnMouseDoubleClick(e); if(e.Button==MouseButtons.Left) gestor?.DobleClic(ADocumento(e.Location)); }
         private void ActualizarCursor(PointF p)
         {
-            if(gestor==null||(gestor.HerramientaActual!=HerramientaTipo.Seleccion&&gestor.HerramientaActual!=HerramientaTipo.SeleccionLibre)||gestor.Seleccion.Count==0){Cursor=Cursors.Cross;return;}
+            if(gestor==null||(!gestor.EditandoFiguraReciente&&gestor.HerramientaActual!=HerramientaTipo.Seleccion&&gestor.HerramientaActual!=HerramientaTipo.SeleccionLibre)||gestor.Seleccion.Count==0){Cursor=Cursors.Cross;return;}
             RectangleF r=gestor.LimitesSeleccion();PointF escala=gestor.PuntoTiradorEscala();PointF rotacion=gestor.PuntoTiradorRotacion();
             if(LineaFigura.Distancia(p,rotacion)<=gestor.ToleranciaInteraccion)Cursor=Cursors.Hand;
             else if(LineaFigura.Distancia(p,escala)<=gestor.ToleranciaInteraccion)Cursor=Cursors.SizeNWSE;

@@ -9,10 +9,21 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         public override string Tipo=>EsBorrador?"borrador":"trazo";
         public override IReadOnlyList<PointF> PuntosBase=>puntos;
         public bool EsBorrador{get;set;}
+        public bool EsPincel{get;set;}
         public TrazoFigura(){}
-        public TrazoFigura(IEnumerable<PointF> p,EstiloFigura e,bool borrador){puntos.AddRange(p);Estilo=e.Clonar();EsBorrador=borrador;}
+        public TrazoFigura(IEnumerable<PointF> p,EstiloFigura e,bool borrador,bool pincel=false){puntos.AddRange(p);Estilo=e.Clonar();EsBorrador=borrador;EsPincel=pincel;}
         public void EstablecerPuntos(IEnumerable<PointF> p){puntos.Clear();puntos.AddRange(p);}
         public void AgregarPunto(PointF p){puntos.Add(p);}
-        public override void Rasterizar(ContextoRaster c){if(puntos.Count==0)return;c.Linea=new LineaBresenham();Color color=EsBorrador?c.Fondo:Estilo.ColorLinea;var t=PuntosTransformados;if(t.Count==1)c.Buffer.PonerPixelGrueso((int)t[0].X,(int)t[0].Y,color,Estilo.Grosor);for(int i=1;i<t.Count;i++)c.DibujarSegmento(t[i-1],t[i],color,Estilo.Grosor);}
+        public override void Rasterizar(ContextoRaster c)
+        {
+            if(puntos.Count==0)return;Color color=EsBorrador?c.Fondo:Estilo.ColorLinea;var t=PuntosTransformados;var linea=new LineaBresenham();
+            DibujarPunta(c.Buffer,Point.Round(t[0]),color);
+            for(int i=1;i<t.Count;i++)foreach(var punto in linea.Calcular(Point.Round(t[i-1]),Point.Round(t[i])))DibujarPunta(c.Buffer,punto,color);
+        }
+        private void DibujarPunta(BufferPixeles buffer,Point punto,Color color)
+        {
+            if(EsPincel||EsBorrador)buffer.PonerPixelGrueso(punto.X,punto.Y,color,Estilo.Grosor);
+            else buffer.PonerPixelCuadrado(punto.X,punto.Y,color,Estilo.Grosor);
+        }
     }
 }

@@ -25,6 +25,7 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
         public int Forma { get; set; }
         public bool Redondeado { get; set; }
         public bool EsBorrador { get; set; }
+        public bool EsPincel { get; set; }
         public string Texto { get; set; }
         public string Fuente { get; set; }
         public float TamanoFuente { get; set; }
@@ -74,7 +75,7 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
             var elipse = f as ElipseFigura; if (elipse != null) d.AlgoritmoCirculo = (int)elipse.Algoritmo;
             var poligono = f as PoligonoFigura; if (poligono != null) d.Forma = (int)poligono.Forma;
             var rect = f as RectanguloFigura; if (rect != null) d.Redondeado = rect.Redondeado;
-            var trazo = f as TrazoFigura; if (trazo != null) d.EsBorrador = trazo.EsBorrador;
+            var trazo = f as TrazoFigura; if (trazo != null) { d.EsBorrador = trazo.EsBorrador; d.EsPincel = trazo.EsPincel; }
             var texto = f as TextoFigura; if (texto != null) { d.Texto=texto.Texto; d.Fuente=texto.Fuente; d.TamanoFuente=texto.TamanoFuente; d.Negrita=texto.Negrita; d.Cursiva=texto.Cursiva; }
             return d;
         }
@@ -84,7 +85,7 @@ namespace Paint_Bolaños_Flores_Venegas.Archivos
             if (d == null || d.Puntos == null) throw new InvalidDataException("Figura incompleta.");
             var p = d.Puntos.Select(x => new PointF(x.X, x.Y)).ToList(); Figura2D f;
             if (d.Tipo == "linea") { var x = new LineaFigura(); x.EstablecerPuntos(p); x.Algoritmo=(AlgoritmoLineaTipo)d.AlgoritmoLinea; f=x; }
-            else if (d.Tipo == "trazo" || d.Tipo == "borrador") { var x=new TrazoFigura(); x.EstablecerPuntos(p); x.EsBorrador=d.EsBorrador || d.Tipo=="borrador"; f=x; }
+            else if (d.Tipo == "trazo" || d.Tipo == "borrador") { var x=new TrazoFigura(); x.EstablecerPuntos(p); x.EsBorrador=d.EsBorrador || d.Tipo=="borrador"; x.EsPincel=d.EsPincel; f=x; }
             else if (d.Tipo == "rectangulo" || d.Tipo == "rectangulo_redondeado") { RectanguloFigura x=d.Redondeado||d.Tipo=="rectangulo_redondeado"?(RectanguloFigura)new RectanguloRedondeadoFigura():new RectanguloFigura(); x.EstablecerPuntos(p); f=x; }
             else if (d.Tipo == "elipse") { var x=new ElipseFigura(); x.EstablecerPuntos(p); x.Algoritmo=(AlgoritmoCirculoTipo)d.AlgoritmoCirculo; f=x; }
             else if (d.Tipo == "bezier") { var x=new BezierFigura(); x.EstablecerPuntos(p); f=x; }

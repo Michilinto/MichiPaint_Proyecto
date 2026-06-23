@@ -24,6 +24,7 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         private TransformacionActiva transformacion;
         private List<double[]> matricesAntes;
         private PointF centroTransformacion;
+        private bool editandoFiguraReciente;
 
         public DocumentoDibujo Documento { get; }
         public HistorialComandos Historial { get; }
@@ -36,7 +37,12 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         public Font FuenteTexto { get; set; } = new Font("Microsoft Sans Serif", 12);
         public Figura2D VistaPrevia => previa;
         public IReadOnlyList<PointF> Lazo => lazo.AsReadOnly();
+        public PointF? PuntoInicialPoligono => puntosTemporales.Count>0?(PointF?)puntosTemporales[0]:null;
+        public IReadOnlyList<PointF> PuntosCurvaEnConstruccion =>
+            HerramientaActual == HerramientaTipo.Curva ? puntosTemporales.AsReadOnly() : new List<PointF>().AsReadOnly();
+        public bool ConstruyendoCurva => HerramientaActual == HerramientaTipo.Curva && puntosTemporales.Count > 0 && !editandoFiguraReciente;
         public IReadOnlyList<Figura2D> Seleccion => seleccion.AsReadOnly();
+        public bool EditandoFiguraReciente=>editandoFiguraReciente;
         public float ToleranciaInteraccion { get; set; } = 9f;
         private readonly List<Figura2D> seleccion = new List<Figura2D>();
         public event EventHandler CambioVisual;
@@ -49,6 +55,11 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         public void Iniciar(PointF p)
         {
             inicio = ultimo = p; presionado = true; previa = null;
+            if(editandoFiguraReciente&&seleccion.Count>0)
+            {
+                if(EsInteraccionConSeleccion(p)){IniciarSeleccion(p);return;}
+                seleccion.Clear();editandoFiguraReciente=false;NotificarSeleccion();Cambio();
+            }
             if (HerramientaActual == HerramientaTipo.Seleccion) { IniciarSeleccion(p); return; }
             if (HerramientaActual == HerramientaTipo.SeleccionLibre)
             {
@@ -58,20 +69,55 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
             if (HerramientaActual == HerramientaTipo.Relleno) { AplicarRelleno(Point.Round(p)); presionado = false; return; }
             if (HerramientaActual == HerramientaTipo.Texto) { presionado = false; var texto=Documento.Figuras.Reverse().OfType<TextoFigura>().FirstOrDefault(x=>x.Contiene(p)); seleccion.Clear(); if(texto!=null)seleccion.Add(texto); TextoSolicitado?.Invoke(p); return; }
             if (HerramientaActual == HerramientaTipo.Poligono && FormaActual == FormaPersonalizada.Poligono)
-            { puntosTemporales.Add(p); previa = puntosTemporales.Count > 1 ? new PoligonoFigura(puntosTemporales, EstiloActual) : null; presionado = false; Cambio(); return; }
+            {
+                if(puntosTemporales.Count>=3&&LineaFigura.Distancia(puntosTemporales[0],p)<=ToleranciaInteraccion)
+                {
+                    presionado=false;ConfirmarTemporal();return;
+                }
+                if(puntosTemporales.Count==0||LineaFigura.Distancia(puntosTemporales[puntosTemporales.Count-1],p)>2f)puntosTemporales.Add(p);
+                previa=puntosTemporales.Count>1?new PoligonoFigura(puntosTemporales,EstiloActual){Cerrado=false}:null;presionado=false;Cambio();return;
+            }
             if (HerramientaActual == HerramientaTipo.Curva)
-            { puntosTemporales.Add(p); previa = puntosTemporales.Count > 1 ? new BezierFigura(puntosTemporales, EstiloActual) : null; presionado = false; if (puntosTemporales.Count == 4) ConfirmarTemporal(); else Cambio(); return; }
+            {
+                if (puntosTemporales.Count == 0 || LineaFigura.Distancia(puntosTemporales[puntosTemporales.Count - 1], p) > 2f)
+                    puntosTemporales.Add(p);
+
+                previa = puntosTemporales.Count > 1
+                    ? new BezierFigura(puntosTemporales, EstiloActual)
+                    : null;
+                presionado = false;
+
+                // Dos puntos forman el grado 1, tres el grado 2 y cuatro
+                // el grado 3. El cuarto punto confirma la curva cúbica.
+                if (puntosTemporales.Count == 4) ConfirmarTemporal();
+                else Cambio();
+                return;
+            }
             if (HerramientaActual == HerramientaTipo.Lapiz || HerramientaActual == HerramientaTipo.Pincel || HerramientaActual == HerramientaTipo.Borrador)
             {
-                var e = EstiloActual.Clonar(); if (HerramientaActual == HerramientaTipo.Lapiz) e.Grosor = Math.Max(1, Math.Min(2, e.Grosor)); if (HerramientaActual == HerramientaTipo.Borrador) e.Grosor = Math.Max(6, e.Grosor * 2);
-                previa = new TrazoFigura(new[] { p }, e, HerramientaActual == HerramientaTipo.Borrador); Cambio();
+                var e = EstiloActual.Clonar();
+                previa = new TrazoFigura(new[] { p }, e, HerramientaActual == HerramientaTipo.Borrador, HerramientaActual == HerramientaTipo.Pincel); Cambio();
             }
         }
 
         public void Mover(PointF p)
         {
+            if (!presionado && ConstruyendoCurva)
+            {
+                var puntosVista = new List<PointF>(puntosTemporales);
+                if (LineaFigura.Distancia(puntosVista[puntosVista.Count - 1], p) > .5f)
+                    puntosVista.Add(p);
+                previa = puntosVista.Count > 1 ? new BezierFigura(puntosVista, EstiloActual) : null;
+                Cambio();
+                return;
+            }
+            if(!presionado&&HerramientaActual==HerramientaTipo.Poligono&&FormaActual==FormaPersonalizada.Poligono&&puntosTemporales.Count>0)
+            {
+                var puntosVista=new List<PointF>(puntosTemporales);if(LineaFigura.Distancia(puntosVista[puntosVista.Count-1],p)>.5f)puntosVista.Add(p);
+                previa=puntosVista.Count>1?new PoligonoFigura(puntosVista,EstiloActual){Cerrado=false}:null;Cambio();return;
+            }
             if (!presionado) return;
-            if (HerramientaActual == HerramientaTipo.Seleccion || (HerramientaActual == HerramientaTipo.SeleccionLibre && transformacion != TransformacionActiva.Ninguna)) { TransformarSeleccion(p); ultimo = p; Cambio(); return; }
+            if (transformacion != TransformacionActiva.Ninguna) { TransformarSeleccion(p); ultimo = p; Cambio(); return; }
             if (HerramientaActual == HerramientaTipo.SeleccionLibre) { if (LineaFigura.Distancia(p, ultimo) > 2) lazo.Add(p); ultimo = p; Cambio(); return; }
             var trazo = previa as TrazoFigura; if (trazo != null) { if (LineaFigura.Distancia(p, ultimo) > 1) trazo.AgregarPunto(p); ultimo = p; Cambio(); return; }
             previa = CrearFiguraArrastre(inicio, p); ultimo = p; Cambio();
@@ -80,10 +126,10 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         public void Terminar(PointF p)
         {
             if (!presionado) return; presionado = false;
-            if (HerramientaActual == HerramientaTipo.Seleccion || (HerramientaActual == HerramientaTipo.SeleccionLibre && transformacion != TransformacionActiva.Ninguna)) { FinalizarTransformacion(); return; }
+            if (transformacion != TransformacionActiva.Ninguna) { FinalizarTransformacion(); return; }
             if (HerramientaActual == HerramientaTipo.SeleccionLibre) { SeleccionarConLazo(); lazo.Clear(); Cambio(); return; }
             if (previa == null) previa = CrearFiguraArrastre(inicio, p);
-            if (previa != null) { Historial.Ejecutar(new ComandoAgregar(Documento, previa)); previa = null; }
+            if (previa != null) { var creada=previa;Historial.Ejecutar(new ComandoAgregar(Documento, creada));previa=null;if(DebeEditarAlCrear(creada))SeleccionarFiguraReciente(creada); }
             Cambio();
         }
 
@@ -96,14 +142,14 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
             }
         }
 
-        public void Cancelar() { previa = null; puntosTemporales.Clear(); lazo.Clear(); presionado = false; transformacion = TransformacionActiva.Ninguna; Cambio(); }
+        public void Cancelar() { previa = null; puntosTemporales.Clear(); lazo.Clear(); presionado = false; transformacion = TransformacionActiva.Ninguna;editandoFiguraReciente=false;seleccion.Clear();NotificarSeleccion();Cambio(); }
 
         public void AgregarTexto(PointF p, string texto)
         {
             if (string.IsNullOrWhiteSpace(texto)) return;
             var existente = seleccion.OfType<TextoFigura>().FirstOrDefault(x => x.Contiene(p));
             if (existente != null) { existente.Texto = texto; Documento.Notificar(); }
-            else Historial.Ejecutar(new ComandoAgregar(Documento, new TextoFigura(p, texto, FuenteTexto, EstiloActual.ColorLinea)));
+            else{var figura=new TextoFigura(p,texto,FuenteTexto,EstiloActual.ColorLinea);Historial.Ejecutar(new ComandoAgregar(Documento,figura));SeleccionarFiguraReciente(figura);}
         }
 
         public void EliminarSeleccion()
@@ -190,7 +236,12 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
 
         private void ConfirmarTemporal()
         {
-            if (previa != null) Historial.Ejecutar(new ComandoAgregar(Documento, previa)); previa = null; puntosTemporales.Clear(); Cambio();
+            if(HerramientaActual==HerramientaTipo.Poligono&&FormaActual==FormaPersonalizada.Poligono)
+            {
+                if(puntosTemporales.Count>=3){var figura=new PoligonoFigura(puntosTemporales,EstiloActual){Cerrado=true};Historial.Ejecutar(new ComandoAgregar(Documento,figura));SeleccionarFiguraReciente(figura);}
+            }
+            else if (previa != null){var figura=previa;Historial.Ejecutar(new ComandoAgregar(Documento,figura));if(DebeEditarAlCrear(figura))SeleccionarFiguraReciente(figura);}
+            previa = null; puntosTemporales.Clear(); Cambio();
         }
 
         private void AplicarRelleno(Point semilla)
@@ -291,6 +342,8 @@ namespace Paint_Bolaños_Flores_Venegas.Nucleo
         }
 
         private void SeleccionarSolo(Figura2D f) { seleccion.Clear(); if (f != null) seleccion.Add(f); NotificarSeleccion(); }
+        private void SeleccionarFiguraReciente(Figura2D figura){seleccion.Clear();seleccion.Add(figura);editandoFiguraReciente=true;NotificarSeleccion();}
+        private static bool DebeEditarAlCrear(Figura2D figura){return figura is LineaFigura||figura is RectanguloFigura||figura is ElipseFigura||figura is PoligonoFigura||figura is BezierFigura||figura is TextoFigura;}
         private void NotificarSeleccion()=>SeleccionActualizada?.Invoke(seleccion.Count);
         private void Cambio() => CambioVisual?.Invoke(this, EventArgs.Empty);
         private static RectangleF Normalizar(PointF a, PointF b) => RectangleF.FromLTRB(Math.Min(a.X,b.X), Math.Min(a.Y,b.Y), Math.Max(a.X,b.X), Math.Max(a.Y,b.Y));
